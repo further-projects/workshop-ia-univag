@@ -1,0 +1,25 @@
+# ai-jail sandbox configuration
+# https://github.com/akitaonrails/ai-jail
+# Edit freely. Regenerate with: ai-jail --clean --init
+
+command = ["codex"]
+deny_paths = [
+    ".env",
+    ".env.local",
+    ".env.production",
+    "**/*.env",
+    "secrets/**",
+    "**/*.pem",
+    "**/*.key",
+    "credentials.json",
+]
+no_gpu = true
+no_docker = true
+tailscale = false
+no_display = true
+no_mise = true
+ssh = false
+no_landlock = false
+no_seccomp = false
+no_rlimits = false
+systemd_user = false
