@@ -4,9 +4,23 @@
 
 **Created**: 2026-08-11
 
-**Status**: Draft
+**Status**: Approved
 
 **Input**: Oferecer edição Rich Text, navegação entre documentos e sumário baseado em títulos.
+
+## Clarifications
+
+### Session 2026-08-12
+
+- Q: Como as alterações do editor devem ser salvas e protegidas contra perda ao trocar de documento
+  ou fechar a página? → A: Autosave após inatividade; tentar salvar ao sair e avisar antes de
+  descartar se houver falha.
+- Q: Quais níveis de título o editor deve oferecer e incluir no sumário? → A: H1, H2 e H3.
+- Q: Como o usuário deve escolher cor e tamanho da fonte? → A: Paleta e tamanhos predefinidos.
+- Q: Como a sidebar de documentos e o sumário devem funcionar em telas estreitas? → A: Ambos
+  recolhidos em painéis acionáveis.
+- Q: O que deve acontecer quando o autosave detectar que outra sessão já salvou uma versão mais
+  recente do mesmo documento? → A: Rejeitar, preservar alterações locais e solicitar recarga.
 
 ## User Scenarios & Testing
 
@@ -104,33 +118,44 @@ de conta sem expor documentos de outros usuários.
 - Títulos repetidos devem produzir destinos de navegação distintos e estáveis durante a sessão.
 - Formatação desconhecida ou conteúdo legado deve falhar de forma segura, sem executar HTML ativo.
 - Falha de persistência ou troca de documento não deve descartar mudanças silenciosamente.
+- Autosave de uma versão desatualizada deve ser rejeitado sem mesclagem automática, preservar as
+  alterações locais e solicitar que o usuário recarregue a versão mais recente.
 
 ## Requirements
 
 ### Functional Requirements
 
 - **FR-001**: Proprietários MUST poder inserir, selecionar, substituir e remover conteúdo textual.
-- **FR-002**: O editor MUST oferecer negrito, itálico, sublinhado, cor e tamanho de fonte.
+- **FR-002**: O editor MUST oferecer negrito, itálico, sublinhado, cor por uma paleta predefinida e
+  tamanho de fonte por um conjunto predefinido.
 - **FR-003**: O editor MUST oferecer alinhamento à esquerda, centralizado, à direita e justificado.
 - **FR-004**: O editor MUST oferecer listas ordenadas e não ordenadas.
-- **FR-005**: O editor MUST oferecer níveis de título suficientes para estruturar o sumário.
+- **FR-005**: O editor MUST oferecer títulos H1, H2 e H3, e somente esses níveis MUST compor o
+  sumário.
 - **FR-006**: A toolbar MUST permanecer acima da área de conteúdo durante a edição.
 - **FR-007**: A toolbar MUST comunicar o estado ativo, inativo, misto ou indisponível das ações.
 - **FR-008**: Ações essenciais MUST ser operáveis por teclado e possuir nomes acessíveis.
 - **FR-009**: Conteúdo persistido MUST preservar texto, estrutura e formatos suportados ao reabrir.
 - **FR-010**: O conteúdo canônico MUST permanecer estruturado e permitir representações derivadas sem
   perda da fonte original.
-- **FR-011**: Conteúdo inserido externamente MUST ser limitado a estruturas e formatos aceitos.
+- **FR-011**: Conteúdo inserido externamente MUST ser limitado a estruturas e formatos aceitos; cores
+  e tamanhos fora dos conjuntos predefinidos MUST ser normalizados para um valor aceito ou removidos.
 - **FR-012**: O editor MUST NOT executar scripts ou conteúdo ativo proveniente do documento.
 - **FR-013**: O sumário MUST ser derivado dos títulos do conteúdo e respeitar ordem e hierarquia.
 - **FR-014**: Cada item do sumário MUST navegar para um título único no documento atual.
 - **FR-015**: O sumário MUST acompanhar mudanças de títulos durante a sessão de edição.
 - **FR-016**: A sidebar MUST listar somente documentos do usuário autenticado.
 - **FR-017**: A sidebar MUST oferecer criação de documento, troca de documento e acesso à conta.
-- **FR-018**: Trocas de contexto e falhas de persistência MUST NOT causar perda silenciosa.
-- **FR-019**: O estado de salvamento MUST distinguir alterações pendentes, persistidas e falhas.
-- **FR-020**: A interface MUST adaptar toolbar, sidebar e sumário quando não houver largura suficiente,
-  mantendo escrita e ações essenciais acessíveis.
+- **FR-018**: O editor MUST iniciar autosave após um período configurado sem alterações.
+- **FR-019**: Ao trocar de documento ou fechar a página com alterações pendentes, o editor MUST tentar
+  persistir as alterações e, se não conseguir confirmá-las, MUST exigir confirmação explícita antes
+  de permitir seu descarte.
+- **FR-020**: O estado de salvamento MUST distinguir alterações pendentes, persistidas e falhas.
+- **FR-021**: Em telas sem largura suficiente para a apresentação lateral, a sidebar e o sumário MUST
+  permanecer recolhidos em painéis acionáveis, mantendo escrita, navegação e ações essenciais
+  acessíveis por teclado e tecnologia assistiva.
+- **FR-022**: Ao detectar que outra sessão persistiu uma versão mais recente, o autosave MUST rejeitar
+  a versão desatualizada, preservar as alterações locais e solicitar recarga, sem mesclagem automática.
 
 ### Key Entities
 
@@ -151,11 +176,14 @@ de conta sem expor documentos de outros usuários.
   testes de acessibilidade.
 - **SC-005**: Nenhum cenário de colagem, renderização ou reabertura executa conteúdo ativo armazenado.
 - **SC-006**: Nenhum cenário testado de falha ou troca de contexto perde alterações sem aviso.
+- **SC-007**: 100% dos cenários automatizados de conflito entre sessões rejeitam a versão
+  desatualizada e preservam as alterações locais para recuperação pelo usuário.
 
 ## Assumptions
 
 - Edição colaborativa em tempo real está fora do escopo.
 - HTML e Markdown são formatos futuros de exportação, não o formato canônico.
-- O comportamento exato de autosave, intervalo e recuperação será decidido antes do planejamento
-  técnico; esta spec exige apenas estados claros e ausência de perda silenciosa.
-- A experiência responsiva pode recolher painéis laterais, desde que preserve as capacidades.
+- O intervalo de inatividade do autosave e a política de novas tentativas serão definidos no
+  planejamento técnico, preservando o comportamento de proteção contra descarte estabelecido nesta
+  spec.
+- A largura exata para recolher os painéis laterais será definida no planejamento técnico.
