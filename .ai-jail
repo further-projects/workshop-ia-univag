@@ -2,7 +2,11 @@
 # https://github.com/akitaonrails/ai-jail
 # Edit freely. Regenerate with: ai-jail --clean --init
 
-command = ["codex"]
+command = [
+    "opencode",
+    "--sandbox",
+    "workspace-write",
+]
 deny_paths = [
     ".env",
     ".env.local",
