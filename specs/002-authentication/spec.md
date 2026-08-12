@@ -4,9 +4,19 @@
 
 **Created**: 2026-08-11
 
-**Status**: Draft
+**Status**: Approved
 
 **Input**: Permitir cadastro e login seguros, manter sessão e impedir acesso não autorizado.
+
+## Clarifications
+
+### Session 2026-08-12
+
+- Q: Quando alguém tentar cadastrar um e-mail já existente, qual comportamento visível deverá ocorrer? → A: Erro genérico, sem revelar que o e-mail já existe.
+- Q: Qual política mínima de senha o cadastro deverá exigir? → A: De 8 a 128 caracteres, sem regras de composição.
+- Q: Uma tentativa feita durante o bloqueio deverá reiniciar os 15 minutos? → A: Não; o prazo permanece fixo desde a quinta falha.
+- Q: Uma sessão usada regularmente poderá continuar válida além de sete dias desde o login inicial? → A: Sim; sete dias é o limite de inatividade.
+- Q: Qual limite por origem deverá ser aplicado às tentativas de login? → A: 20 tentativas por minuto, com rejeição por um minuto.
 
 ## User Scenarios & Testing
 
@@ -26,7 +36,7 @@ sem precisar entrar novamente.
 2. **Given** um e-mail inválido, senhas diferentes ou senha fora da política, **When** o cadastro for
    enviado, **Then** nenhuma conta será criada e os campos inválidos serão indicados.
 3. **Given** um e-mail já utilizado, **When** um novo cadastro for solicitado, **Then** nenhuma conta
-   duplicada será criada e uma resposta segura será apresentada.
+   duplicada será criada e um erro genérico será apresentado sem revelar que o e-mail já existe.
 
 ---
 
@@ -64,7 +74,7 @@ novas tentativas não autenticam, mesmo com a senha correta.
 1. **Given** quatro falhas consecutivas, **When** ocorrer a quinta falha, **Then** a conta será
    bloqueada por 15 minutos.
 2. **Given** uma conta bloqueada, **When** houver nova tentativa antes do prazo, **Then** o acesso será
-   negado com mensagem genérica de indisponibilidade temporária.
+   negado com mensagem genérica de indisponibilidade temporária e o prazo não será reiniciado.
 3. **Given** que o prazo terminou, **When** credenciais válidas forem fornecidas, **Then** o login será
    permitido e o contador será zerado.
 
@@ -76,8 +86,8 @@ Como usuário autenticado, quero permanecer conectado durante meu uso e poder sa
 
 **Why this priority**: Sessões previsíveis evitam logins excessivos e acesso residual indesejado.
 
-**Independent Test**: A sessão permanece utilizável por atividade dentro do limite de sete dias, é
-invalidada ao sair e deixa de autorizar acesso após expirar.
+**Independent Test**: A sessão permanece utilizável enquanto for renovada por atividade antes de sete
+dias de inatividade, é invalidada ao sair e deixa de autorizar acesso após expirar.
 
 **Acceptance Scenarios**:
 
@@ -93,6 +103,8 @@ invalidada ao sair e deixa de autorizar acesso após expirar.
 - E-mails com diferenças de caixa ou espaços não devem criar identidades duplicadas.
 - Requisições simultâneas de cadastro para o mesmo e-mail devem produzir no máximo uma conta.
 - Tentativas simultâneas não devem ultrapassar o limite sem acionar o bloqueio.
+- Mais de 20 tentativas de login pela mesma origem dentro de um minuto devem ser rejeitadas durante o
+  minuto seguinte, independentemente da conta informada.
 - Sessão de usuário desativado deve deixar de autorizar novas operações.
 - Cookies ausentes, alterados, expirados ou revogados devem ser tratados como sessão inválida.
 - Mensagens e tempos de resposta não devem facilitar descoberta de contas existentes.
@@ -103,20 +115,26 @@ invalidada ao sair e deixa de autorizar acesso após expirar.
 
 - **FR-001**: Visitantes MUST poder se cadastrar com e-mail, senha e confirmação de senha.
 - **FR-002**: O sistema MUST normalizar e validar o e-mail antes do cadastro ou login.
-- **FR-003**: O sistema MUST validar igualdade das senhas e uma política de senha definida no plano.
+- **FR-003**: O sistema MUST validar a igualdade das senhas e exigir de 8 a 128 caracteres, sem regras
+  de composição.
 - **FR-004**: A confirmação de senha MUST NOT ser persistida.
 - **FR-005**: Cada e-mail normalizado MUST identificar no máximo uma conta.
+- **FR-005a**: Uma tentativa de cadastro com e-mail já utilizado MUST retornar erro genérico sem
+  revelar que o e-mail já existe.
 - **FR-006**: Um cadastro válido MUST iniciar a sessão e direcionar à tela principal.
 - **FR-007**: Usuários ativos MUST poder entrar com e-mail e senha válidos.
 - **FR-008**: Falhas de login MUST usar mensagens que não revelem se e-mail ou senha estão incorretos.
 - **FR-009**: O sistema MUST contabilizar falhas consecutivas por conta sem expor o contador.
-- **FR-010**: A quinta falha consecutiva MUST bloquear a conta por 15 minutos.
+- **FR-010**: A quinta falha consecutiva MUST bloquear a conta por 15 minutos contados dessa falha;
+  tentativas durante o bloqueio MUST NOT reiniciar ou estender o prazo.
 - **FR-011**: Um login válido após o bloqueio expirar MUST zerar tentativas e remover o bloqueio.
-- **FR-012**: A rota de login MUST aplicar limitação adicional de requisições por origem.
-- **FR-013**: Sessões MUST permanecer válidas por no máximo sete dias e renovar-se somente por uso
-  ativo conforme a política global.
-- **FR-014**: Credenciais e identificadores de sessão MUST NOT ficar acessíveis ao código executado no
-  navegador.
+- **FR-012**: A rota de login MUST aceitar no máximo 20 tentativas por minuto por origem e MUST
+  rejeitar novas tentativas dessa origem por um minuto após exceder o limite.
+- **FR-013**: Sessões MUST expirar após sete dias sem atividade e MUST renovar essa janela após uma
+  operação autenticada quando houver transcorrido pelo menos 24 horas desde a última renovação.
+- **FR-014**: Senhas MAY existir transitoriamente no estado do formulário durante preenchimento e envio,
+  mas MUST NOT ser persistidas no navegador ou registradas em logs; identificadores de sessão MUST NOT
+  ficar acessíveis ao código executado no navegador.
 - **FR-015**: Logout MUST invalidar a sessão utilizada.
 - **FR-016**: Páginas privadas MUST redirecionar visitantes para o login.
 - **FR-017**: Operações privadas MUST validar sessão e estado ativo da conta no servidor.
@@ -128,10 +146,11 @@ invalidada ao sair e deixa de autorizar acesso após expirar.
 
 ### Key Entities
 
-- **User**: Identidade do usuário, com e-mail normalizado, estado ativo, tentativas, bloqueio e
-  timestamps.
+- **User**: Identidade do usuário, com e-mail normalizado, estado ativo e timestamps.
 - **Credential Account**: Credencial de senha associada ao usuário, sem armazenar texto puro.
 - **Session**: Sessão revogável associada ao usuário, com criação, expiração e metadados de segurança.
+- **Authentication Attempt State**: Estado associado ao e-mail normalizado para contabilizar tentativas,
+  coordenar concorrência e aplicar bloqueio sem revelar se existe uma conta.
 
 ## Success Criteria
 
@@ -146,6 +165,10 @@ invalidada ao sair e deixa de autorizar acesso após expirar.
 - **SC-005**: 100% das operações privadas testadas rejeitam sessões ausentes, expiradas, revogadas ou
   pertencentes a usuário sem acesso ao recurso.
 - **SC-006**: Uma sessão encerrada deixa de autorizar novas operações imediatamente.
+- **SC-007**: 100% das sessões sem atividade por sete dias deixam de autorizar novas operações,
+  enquanto sessões renovadas dentro desse intervalo permanecem utilizáveis.
+- **SC-008**: A vigésima primeira tentativa de login pela mesma origem dentro de um minuto é rejeitada,
+  e novas tentativas dessa origem permanecem rejeitadas durante o minuto seguinte.
 
 ## Assumptions
 
@@ -153,4 +176,6 @@ invalidada ao sair e deixa de autorizar acesso após expirar.
 - Confirmação de e-mail, recuperação de senha, login social e autenticação multifator estão fora do
   escopo desta feature.
 - O produto será servido de forma que o navegador possa usar sessão segura sem armazenar tokens.
-- Política detalhada de senha, cookies, auditoria e implantação será fechada no plano técnico.
+- Esta feature define e testa um mecanismo reutilizável de verificação de propriedade; sua aplicação aos
+  documentos privados ocorre em `003-document-management`.
+- Políticas detalhadas de cookies, auditoria e implantação serão fechadas no plano técnico.
