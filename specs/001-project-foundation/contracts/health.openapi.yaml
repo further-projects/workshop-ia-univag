@@ -1,0 +1,130 @@
+openapi: 3.1.0
+info:
+  title: Mini Notion Foundation Health API
+  version: 1.0.0
+  description: Public readiness contracts used to validate the local integrated environment.
+paths:
+  /api/health:
+    get:
+      operationId: getWebHealth
+      summary: Report web application readiness
+      responses:
+        "200":
+          description: The web application can process requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebHealthResponse"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /health:
+    get:
+      operationId: getApiHealth
+      summary: Report API and MongoDB readiness
+      responses:
+        "200":
+          description: The API and MongoDB connection are ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiHealthResponse"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+components:
+  responses:
+    Unavailable:
+      description: One or more required checks are down.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/HealthResponse"
+  schemas:
+    HealthCheck:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - status
+      properties:
+        name:
+          type: string
+          pattern: "^[a-z][a-z0-9-]*$"
+        status:
+          type: string
+          enum:
+            - up
+            - down
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - service
+        - checks
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+            - error
+        service:
+          type: string
+          enum:
+            - web
+            - api
+        checks:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/HealthCheck"
+        timestamp:
+          type: string
+          format: date-time
+    WebHealthResponse:
+      allOf:
+        - $ref: "#/components/schemas/HealthResponse"
+        - type: object
+          properties:
+            service:
+              const: web
+            checks:
+              contains:
+                type: object
+                required:
+                  - name
+                  - status
+                properties:
+                  name:
+                    const: web
+                  status:
+                    const: up
+    ApiHealthResponse:
+      allOf:
+        - $ref: "#/components/schemas/HealthResponse"
+        - type: object
+          properties:
+            service:
+              const: api
+            checks:
+              allOf:
+                - contains:
+                    type: object
+                    required:
+                      - name
+                      - status
+                    properties:
+                      name:
+                        const: api
+                      status:
+                        const: up
+                - contains:
+                    type: object
+                    required:
+                      - name
+                      - status
+                    properties:
+                      name:
+                        const: mongodb
+                      status:
+                        const: up

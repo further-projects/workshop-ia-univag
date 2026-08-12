@@ -8,6 +8,16 @@
 
 **Input**: Preparar uma base de monorepo consistente, reproduzível e verificável para o Mini Notion.
 
+## Clarifications
+
+### Session 2026-08-12
+
+- Q: Ao concluir a foundation, quais aplicações precisam estar minimamente executáveis e verificáveis? → A: Web, API e MongoDB com verificações de saúde.
+- Q: A foundation deve incluir um teste automatizado que comprove a inicialização e a saúde integradas da aplicação web, da API e do MongoDB? → A: Sim, teste integrado automatizado.
+- Q: Em quais sistemas operacionais a preparação e os quality gates da foundation precisam funcionar oficialmente? → A: macOS e Linux.
+- Q: O fluxo obrigatório de commits deve validar apenas a mensagem ou também executar verificações do código antes de aceitar o commit? → A: Mensagem e verificações nos arquivos alterados.
+- Q: Quando uma configuração obrigatória estiver ausente ou inválida, em que momento a preparação deve falhar? → A: Imediatamente, antes de executar trabalho.
+
 ## User Scenarios & Testing
 
 ### User Story 1 - Preparar o ambiente local (Priority: P1)
@@ -17,15 +27,16 @@ trabalhar nas aplicações sem configurar cada parte manualmente.
 
 **Why this priority**: Todas as funcionalidades dependem de um ambiente confiável e reproduzível.
 
-**Independent Test**: Uma pessoa com os pré-requisitos documentados prepara o workspace limpo e
-executa as verificações básicas sem ajustes não documentados.
+**Independent Test**: Em macOS ou Linux, uma pessoa com os pré-requisitos documentados prepara o
+workspace limpo e executa as verificações básicas sem ajustes não documentados.
 
 **Acceptance Scenarios**:
 
 1. **Given** um clone limpo e os pré-requisitos instalados, **When** a preparação documentada for
    executada, **Then** todas as áreas do workspace estarão disponíveis.
-2. **Given** uma configuração obrigatória ausente, **When** a preparação for executada, **Then** a
-   falha indicará claramente o requisito ausente.
+2. **Given** uma configuração obrigatória ausente ou inválida, **When** a preparação for executada,
+   **Then** ela falhará imediatamente, antes de instalar componentes ou iniciar serviços, e indicará
+   claramente o requisito afetado.
 
 ---
 
@@ -60,8 +71,9 @@ encerrado sem deixar processos ou dados temporários inesperados.
 
 **Acceptance Scenarios**:
 
-1. **Given** os pré-requisitos atendidos, **When** o ambiente integrado for iniciado, **Then** cada
-   serviço obrigatório ficará saudável em até dois minutos.
+1. **Given** os pré-requisitos atendidos, **When** o ambiente integrado for iniciado, **Then** a
+   aplicação web, a API e o MongoDB ficarão acessíveis e com verificações de saúde bem-sucedidas em
+   até dois minutos.
 2. **Given** o ambiente em execução, **When** o encerramento documentado for solicitado, **Then** todos
    os serviços gerenciados serão encerrados de forma previsível.
 
@@ -84,12 +96,19 @@ encerrado sem deixar processos ou dados temporários inesperados.
 - **FR-005**: Cada aplicação MUST resolver um alias local para sua própria pasta de código-fonte.
 - **FR-006**: A raiz MUST oferecer verificações consistentes de formato, lint, tipos, testes e build.
 - **FR-007**: As verificações MUST falhar quando qualquer workspace aplicável falhar.
-- **FR-008**: O ambiente integrado MUST iniciar aplicações e serviços de dados de forma reproduzível.
+- **FR-008**: O ambiente integrado MUST iniciar a aplicação web, a API e o MongoDB de forma
+  reproduzível, com verificações de saúde para os três componentes.
 - **FR-009**: Configurações sensíveis MUST ser fornecidas fora do controle de versão.
 - **FR-010**: O projeto MUST documentar pré-requisitos, preparação, execução, validação e encerramento.
-- **FR-011**: Commits MUST ser validados segundo uma convenção única antes de serem aceitos.
+- **FR-011**: Antes de aceitar um commit, o fluxo local MUST validar a mensagem segundo uma convenção
+  única e executar verificações aplicáveis nos arquivos alterados.
 - **FR-012**: Quality gates locais MUST poder ser reutilizados por automação futura sem regras
   divergentes.
+- **FR-013**: Um teste automatizado MUST validar a inicialização e as verificações de saúde integradas
+  da aplicação web, da API e do MongoDB.
+- **FR-014**: A preparação e os quality gates MUST funcionar em macOS e Linux.
+- **FR-015**: A preparação MUST validar configurações obrigatórias antes de instalar componentes ou
+  iniciar serviços e MUST falhar com uma mensagem que identifique o requisito ausente ou inválido.
 
 ## Success Criteria
 
@@ -104,10 +123,14 @@ encerrado sem deixar processos ou dados temporários inesperados.
   atende aos pré-requisitos.
 - **SC-005**: Nenhum segredo real é necessário no repositório para preparar ou validar o ambiente
   local.
+- **SC-006**: O teste integrado automatizado confirma que a aplicação web, a API e o MongoDB iniciam e
+  apresentam verificações de saúde bem-sucedidas.
+- **SC-007**: A preparação documentada e todos os quality gates são concluídos com sucesso em macOS e
+  Linux sem ajustes específicos não documentados.
 
 ## Assumptions
 
-- O primeiro ambiente suportado é desenvolvimento local.
+- O primeiro ambiente suportado é desenvolvimento local em macOS e Linux.
 - Integração contínua e implantação serão especificadas separadamente.
 - O projeto começa sem aplicações legadas que precisem de migração.
 - Ferramentas e versões concretas são decisões do plano técnico, respeitando a visão e a constituição.
