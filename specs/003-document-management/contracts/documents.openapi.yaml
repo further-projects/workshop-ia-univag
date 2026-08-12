@@ -1,0 +1,763 @@
+openapi: 3.1.0
+info:
+  title: Mini Notion Document Management API
+  version: 1.0.0
+  description: Private owner-scoped document CRUD, search and optimistic concurrency facade.
+servers:
+  - url: /api
+security:
+  - cookieAuth: []
+paths:
+  /documents:
+    get:
+      operationId: listDocuments
+      summary: List or search the authenticated user's documents
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Owner-scoped page ordered by most recent modification
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+            Vary:
+              $ref: "#/components/headers/VaryCookie"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentPage"
+        "400":
+          $ref: "#/components/responses/InvalidCursor"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "503":
+          $ref: "#/components/responses/StoreUnavailable"
+    post:
+      operationId: createDocument
+      summary: Create and return a private document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentRequest"
+      responses:
+        "201":
+          description: Document created and ready to edit
+          headers:
+            Location:
+              description: Canonical API path of the created document.
+              schema:
+                type: string
+            ETag:
+              $ref: "#/components/headers/DocumentETag"
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+            Vary:
+              $ref: "#/components/headers/VaryCookie"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/MalformedJson"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/OriginRejected"
+        "413":
+          $ref: "#/components/responses/RequestBodyTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "503":
+          $ref: "#/components/responses/StoreUnavailable"
+  /documents/{documentId}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    get:
+      operationId: getDocument
+      summary: Get one private document for editing
+      responses:
+        "200":
+          description: Current owner-scoped document snapshot
+          headers:
+            ETag:
+              $ref: "#/components/headers/DocumentETag"
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+            Vary:
+              $ref: "#/components/headers/VaryCookie"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/DocumentNotFound"
+        "503":
+          $ref: "#/components/responses/StoreUnavailable"
+    patch:
+      operationId: updateDocument
+      summary: Update a document if its version is still current
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDocumentRequest"
+      responses:
+        "200":
+          description: Document updated; version and modification time advanced
+          headers:
+            ETag:
+              $ref: "#/components/headers/DocumentETag"
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+            Vary:
+              $ref: "#/components/headers/VaryCookie"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/OriginRejected"
+        "404":
+          $ref: "#/components/responses/DocumentNotFound"
+        "412":
+          $ref: "#/components/responses/VersionConflict"
+        "413":
+          $ref: "#/components/responses/RequestBodyTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
+        "503":
+          $ref: "#/components/responses/StoreUnavailable"
+    delete:
+      operationId: deleteDocument
+      summary: Physically delete a private document
+      responses:
+        "204":
+          description: Document deleted before the response was emitted
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/PrivateNoStore"
+            Vary:
+              $ref: "#/components/headers/VaryCookie"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/OriginRejected"
+        "404":
+          $ref: "#/components/responses/DocumentNotFound"
+        "503":
+          $ref: "#/components/responses/StoreUnavailable"
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: mini_notion.session
+      description: Opaque host-only HttpOnly session cookie from authentication.
+  parameters:
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      description: Invalid, missing and foreign identifiers share the owner-safe not-found response.
+      schema:
+        type: string
+    Search:
+      name: search
+      in: query
+      required: false
+      description: Literal partial title/content query; trimmed input is limited to 200 Unicode code points by shared validation, case and accents are ignored, and blank means no filter.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque signed continuation bound to normalized search and page limit.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1024
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Strong ETag returned with the last confirmed document snapshot.
+      schema:
+        type: string
+        pattern: '^"document-[0-9a-fA-F]{24}-[1-9][0-9]*"$'
+  headers:
+    DocumentETag:
+      description: Strong write precondition derived from immutable document ID and current version.
+      schema:
+        type: string
+        pattern: '^"document-[0-9a-fA-F]{24}-[1-9][0-9]*"$'
+    PrivateNoStore:
+      description: Private document responses must not be cached.
+      schema:
+        type: string
+        const: "private, no-store"
+    VaryCookie:
+      description: Response varies by authenticated session cookie.
+      schema:
+        type: string
+        const: Cookie
+    RequestId:
+      description: Correlation identifier safe to include in support reports.
+      schema:
+        type: string
+  schemas:
+    StructuredContent:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - content
+      properties:
+        type:
+          type: string
+          const: doc
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/StructuredNode"
+      description: Canonical JSON is limited to 1,000,000 UTF-8 bytes. Root counts as node/level 1; only nested content nodes increase the 10,000-node and 100-level limits.
+    StructuredNode:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          minLength: 1
+          maxLength: 100
+        attrs:
+          $ref: "#/components/schemas/SafeJsonObject"
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/StructuredNode"
+        marks:
+          type: array
+          items:
+            $ref: "#/components/schemas/StructuredMark"
+        text:
+          type: string
+      description: Final allowed node names and attributes are narrowed by the rich-text feature.
+    StructuredMark:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          minLength: 1
+          maxLength: 100
+        attrs:
+          $ref: "#/components/schemas/SafeJsonObject"
+    SafeJsonObject:
+      type: object
+      propertyNames:
+        not:
+          enum:
+            - __proto__
+            - prototype
+            - constructor
+      additionalProperties:
+        $ref: "#/components/schemas/SafeJsonValue"
+    SafeJsonValue:
+      oneOf:
+        - type: "null"
+        - type: boolean
+        - type: number
+        - type: string
+        - type: array
+          items:
+            $ref: "#/components/schemas/SafeJsonValue"
+        - $ref: "#/components/schemas/SafeJsonObject"
+    CreateDocumentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          description: Trimmed before validation; blank becomes Sem título; normalized value has at most 200 code points.
+        content:
+          $ref: "#/components/schemas/StructuredContent"
+      description: Both fields are optional; omitted values create Sem título with an empty document.
+    UpdateDocumentRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          description: Trimmed before validation; blank becomes Sem título; normalized value has at most 200 code points.
+        content:
+          $ref: "#/components/schemas/StructuredContent"
+    DocumentListItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - title
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          pattern: "^[0-9a-fA-F]{24}$"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Document:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - title
+        - content
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          pattern: "^[0-9a-fA-F]{24}$"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          $ref: "#/components/schemas/StructuredContent"
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DocumentPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/DocumentListItem"
+        nextCursor:
+          type:
+            - string
+            - "null"
+    Violation:
+      oneOf:
+        - $ref: "#/components/schemas/TitleTooLongViolation"
+        - $ref: "#/components/schemas/ContentTooLargeViolation"
+        - $ref: "#/components/schemas/ContentTooDeepViolation"
+        - $ref: "#/components/schemas/ContentTooManyNodesViolation"
+        - $ref: "#/components/schemas/SearchTooLongViolation"
+        - $ref: "#/components/schemas/InvalidContentViolation"
+    TitleTooLongViolation:
+      $ref: "#/components/schemas/TitleCodePointLimitViolation"
+    SearchTooLongViolation:
+      type: object
+      additionalProperties: false
+      required: [field, code, limit, unit]
+      properties:
+        field:
+          const: search
+        code:
+          const: SEARCH_TOO_LONG
+        limit:
+          const: 200
+        unit:
+          const: code_points
+    TitleCodePointLimitViolation:
+      type: object
+      additionalProperties: false
+      required: [field, code, limit, unit]
+      properties:
+        field:
+          const: title
+        code:
+          const: TITLE_TOO_LONG
+        limit:
+          const: 200
+        unit:
+          const: code_points
+    ContentTooLargeViolation:
+      type: object
+      additionalProperties: false
+      required: [field, code, limit, unit]
+      properties:
+        field:
+          const: content
+        code:
+          const: CONTENT_TOO_LARGE
+        limit:
+          const: 1000000
+        unit:
+          const: bytes
+    ContentTooDeepViolation:
+      type: object
+      additionalProperties: false
+      required: [field, code, limit, unit]
+      properties:
+        field:
+          const: content
+        code:
+          const: CONTENT_TOO_DEEP
+        limit:
+          const: 100
+        unit:
+          const: levels
+    ContentTooManyNodesViolation:
+      type: object
+      additionalProperties: false
+      required: [field, code, limit, unit]
+      properties:
+        field:
+          const: content
+        code:
+          const: CONTENT_TOO_MANY_NODES
+        limit:
+          const: 10000
+        unit:
+          const: nodes
+    InvalidContentViolation:
+      type: object
+      additionalProperties: false
+      required: [field, code]
+      properties:
+        field:
+          const: content
+        code:
+          const: INVALID_CONTENT
+    Problem:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - status
+        - code
+        - requestId
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          type: string
+        detail:
+          type: string
+        requestId:
+          type: string
+        retryable:
+          type: boolean
+        violations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Violation"
+    MalformedJsonProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 400
+            code:
+              const: MALFORMED_JSON
+    InvalidCursorProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 400
+            code:
+              const: INVALID_CURSOR
+    InvalidPreconditionProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 400
+            code:
+              const: INVALID_PRECONDITION
+    UnauthenticatedProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 401
+            code:
+              const: UNAUTHENTICATED
+    OriginRejectedProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 403
+            code:
+              const: REQUEST_ORIGIN_REJECTED
+    DocumentNotFoundProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 404
+            code:
+              const: DOCUMENT_NOT_FOUND
+    VersionConflictProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 412
+            code:
+              const: DOCUMENT_VERSION_CONFLICT
+    RequestBodyTooLargeProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 413
+            code:
+              const: REQUEST_BODY_TOO_LARGE
+    ValidationFailedProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 422
+            code:
+              const: VALIDATION_FAILED
+    PreconditionRequiredProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 428
+            code:
+              const: PRECONDITION_REQUIRED
+    StoreUnavailableProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            status:
+              const: 503
+            code:
+              const: DOCUMENT_STORE_UNAVAILABLE
+  responses:
+    InvalidRequest:
+      description: JSON is malformed, or If-Match is malformed or belongs to another path document
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/MalformedJsonProblem"
+              - $ref: "#/components/schemas/InvalidPreconditionProblem"
+    MalformedJson:
+      description: Request body is not valid JSON (`MALFORMED_JSON`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/MalformedJsonProblem"
+    InvalidCursor:
+      description: Cursor is invalid, altered or incompatible (`INVALID_CURSOR`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InvalidCursorProblem"
+    Unauthenticated:
+      description: Session is absent, expired, revoked or inactive (`UNAUTHENTICATED`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/UnauthenticatedProblem"
+    OriginRejected:
+      description: Mutating request origin is absent or untrusted (`REQUEST_ORIGIN_REJECTED`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/OriginRejectedProblem"
+    DocumentNotFound:
+      description: ID is invalid, missing, deleted or belongs to another user (`DOCUMENT_NOT_FOUND`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/DocumentNotFoundProblem"
+    VersionConflict:
+      description: If-Match references a stale owner-scoped version (`DOCUMENT_VERSION_CONFLICT`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/VersionConflictProblem"
+    RequestBodyTooLarge:
+      description: Transport body exceeds 1,250,000 bytes (`REQUEST_BODY_TOO_LARGE`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/RequestBodyTooLargeProblem"
+    ValidationFailed:
+      description: Contract, title, structured content or canonical size is invalid (`VALIDATION_FAILED`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ValidationFailedProblem"
+    PreconditionRequired:
+      description: Update omitted If-Match (`PRECONDITION_REQUIRED`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/PreconditionRequiredProblem"
+    StoreUnavailable:
+      description: Document persistence is temporarily unavailable (`DOCUMENT_STORE_UNAVAILABLE`)
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/PrivateNoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/StoreUnavailableProblem"

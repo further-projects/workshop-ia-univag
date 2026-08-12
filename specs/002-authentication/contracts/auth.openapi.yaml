@@ -1,0 +1,376 @@
+openapi: 3.1.0
+info:
+  title: Mini Notion Authentication API
+  version: 1.0.0
+  description: Stable cookie-based authentication facade. Session tokens are never returned in response bodies.
+servers:
+  - url: /api
+paths:
+  /auth/register:
+    post:
+      operationId: register
+      summary: Register an account and start a session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Account and session created
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SessionCookie"
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentSession"
+        "400":
+          $ref: "#/components/responses/RegistrationFailed"
+        "403":
+          $ref: "#/components/responses/OriginRejected"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /auth/login:
+    post:
+      operationId: login
+      summary: Start a session with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Session created
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/SessionCookie"
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentSession"
+        "401":
+          $ref: "#/components/responses/InvalidCredentials"
+        "403":
+          $ref: "#/components/responses/OriginRejected"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TemporarilyUnavailable"
+  /auth/session:
+    get:
+      operationId: getCurrentSession
+      summary: Resolve the current authoritative session
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Active session
+          headers:
+            Set-Cookie:
+              description: Present only when the session is eligible for renewal.
+              schema:
+                type: string
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Vary:
+              $ref: "#/components/headers/VaryCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentSession"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current session
+      description: Idempotent for missing, invalid or already revoked session cookies.
+      security:
+        - cookieAuth: []
+        - {}
+      responses:
+        "204":
+          description: Session is no longer usable
+          headers:
+            Set-Cookie:
+              description: Clears the session cookie with Max-Age=0.
+              schema:
+                type: string
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          $ref: "#/components/responses/OriginRejected"
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: mini_notion.session
+      description: Opaque host-only HttpOnly session cookie. Secure is mandatory outside local development.
+  headers:
+    SessionCookie:
+      description: mini_notion.session with Path=/, HttpOnly, SameSite=Lax and Secure outside local development.
+      schema:
+        type: string
+    NoStore:
+      description: Authentication responses must not be cached.
+      schema:
+        type: string
+        const: no-store
+    VaryCookie:
+      description: Response varies by the session cookie.
+      schema:
+        type: string
+        const: Cookie
+    RetryAfter:
+      description: Seconds until another authentication attempt may be accepted.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 900
+  schemas:
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+        - passwordConfirmation
+      properties:
+        email:
+          type: string
+          minLength: 3
+          description: Trimmed and lowercased before server-side email validation.
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          format: password
+        passwordConfirmation:
+          type: string
+          minLength: 8
+          maxLength: 128
+          format: password
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          minLength: 3
+          description: Trimmed and lowercased before server-side email validation.
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          format: password
+    CurrentSession:
+      type: object
+      additionalProperties: false
+      required:
+        - user
+      properties:
+        user:
+          $ref: "#/components/schemas/CurrentUser"
+    CurrentUser:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+            - REGISTRATION_FAILED
+            - INVALID_CREDENTIALS
+            - UNAUTHENTICATED
+            - AUTH_TEMPORARILY_UNAVAILABLE
+            - REQUEST_ORIGIN_REJECTED
+        message:
+          type: string
+          minLength: 1
+        issues:
+          type: array
+          description: Present only for VALIDATION_FAILED.
+          items:
+            $ref: "#/components/schemas/ValidationIssue"
+    ValidationIssue:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - code
+      properties:
+        path:
+          type: string
+          enum:
+            - email
+            - password
+            - passwordConfirmation
+        code:
+          type: string
+          minLength: 1
+    RegistrationFailedError:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            code:
+              const: REGISTRATION_FAILED
+    InvalidCredentialsError:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            code:
+              const: INVALID_CREDENTIALS
+    UnauthenticatedError:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            code:
+              const: UNAUTHENTICATED
+    TemporarilyUnavailableError:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            code:
+              const: AUTH_TEMPORARILY_UNAVAILABLE
+    OriginRejectedError:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          properties:
+            code:
+              const: REQUEST_ORIGIN_REJECTED
+    ValidationFailedError:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          required:
+            - issues
+          properties:
+            code:
+              const: VALIDATION_FAILED
+  responses:
+    RegistrationFailed:
+      description: Registration could not be completed. The response does not reveal whether the email exists.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RegistrationFailedError"
+          examples:
+            generic:
+              value:
+                code: REGISTRATION_FAILED
+                message: Registration could not be completed.
+    InvalidCredentials:
+      description: Email, password or account state is not valid for login.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/InvalidCredentialsError"
+          examples:
+            generic:
+              value:
+                code: INVALID_CREDENTIALS
+                message: Invalid email or password.
+    Unauthenticated:
+      description: The session is missing, invalid, expired, revoked or belongs to an inactive user.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+        Vary:
+          $ref: "#/components/headers/VaryCookie"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UnauthenticatedError"
+          examples:
+            generic:
+              value:
+                code: UNAUTHENTICATED
+                message: Authentication is required.
+    TemporarilyUnavailable:
+      description: Login is temporarily unavailable due to account or origin limits.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+        Retry-After:
+          $ref: "#/components/headers/RetryAfter"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TemporarilyUnavailableError"
+          examples:
+            generic:
+              value:
+                code: AUTH_TEMPORARILY_UNAVAILABLE
+                message: Authentication is temporarily unavailable.
+    OriginRejected:
+      description: The mutating request did not come from a trusted origin.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OriginRejectedError"
+          examples:
+            generic:
+              value:
+                code: REQUEST_ORIGIN_REJECTED
+                message: Request origin is not allowed.
+    ValidationFailed:
+      description: The request shape or field values are invalid.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationFailedError"
+          examples:
+            invalidEmail:
+              value:
+                code: VALIDATION_FAILED
+                message: Review the highlighted fields.
+                issues:
+                  - path: email
+                    code: invalid_email

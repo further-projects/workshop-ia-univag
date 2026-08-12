@@ -10,7 +10,7 @@ independentemente planejável e testável.
 | 001 | [Project Foundation](001-project-foundation/spec.md) | Draft | Revisar e clarificar |
 | 002 | [Authentication](002-authentication/spec.md) | Draft | Revisar e clarificar |
 | 003 | [Document Management](003-document-management/spec.md) | Draft | Revisar e clarificar |
-| 004 | [Rich Text Editor](004-rich-text-editor/spec.md) | Draft | Revisar e clarificar |
+| 004 | [Rich Text Editor](004-rich-text-editor/spec.md) | Approved | Gerar tarefas |
 
 ## Estrutura por feature
 
