@@ -1,4 +1,4 @@
 interface:
   display_name: "Git Commit Message"
   short_description: "Create focused Conventional Commit messages"
-  default_prompt: "Use $git-commit-message to analyze my changes and prepare focused Conventional Commits."
+  default_prompt: "Use /git-commit-message to analyze my changes and prepare focused Conventional Commits."

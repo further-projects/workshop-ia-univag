@@ -13,9 +13,9 @@ Create focused Git commits using Conventional Commits. Keep messages in English 
 2. Identify logical change groups by purpose, feature, fix, or maintenance concern.
 3. Flag sensitive, generated, temporary, or suspicious files before staging them.
 4. Propose an ordered commit plan containing:
-   - files or diff sections belonging to each commit;
-   - the reason those changes belong together;
-   - the proposed Conventional Commit message.
+    - files or diff sections belonging to each commit;
+    - the reason those changes belong together;
+    - the proposed Conventional Commit message.
 5. Ask for explicit user approval before staging files or diff sections for a commit.
 6. Stage only the approved group. Use selective or patch staging when a file contains unrelated changes.
 7. Review the staged diff and confirm it matches the approved group.
@@ -29,9 +29,9 @@ Never stage the entire repository merely for convenience. Never use `git add .`,
 Use:
 
 ```text
-<type>[optional scope]: <description>
+<type>[scope]: <description>
 
-[optional body]
+[body]
 ```
 
 Keep the subject concise, imperative, lowercase after the colon, and without a trailing period. Describe the outcome of the change rather than the activity performed.
