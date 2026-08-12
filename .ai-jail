@@ -3,7 +3,7 @@
 # Edit freely. Regenerate with: ai-jail --clean --init
 
 command = [
-    "codex",
+    "opencode",
     "--sandbox",
     "workspace-write",
 ]
