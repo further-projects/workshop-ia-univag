@@ -1,161 +1,235 @@
-# Mini Notion — Visão Geral do Projeto
+# Desenvolvimento de Software com IA na Prática
 
-## Visão
+Este repositório é o material de apoio de um workshop sobre desenvolvimento de software assistido por
+inteligência artificial. O objetivo não é apenas mostrar uma IA gerando código, mas demonstrar como
+dar contexto, estabelecer limites, validar resultados e manter uma pessoa responsável pelas decisões.
 
-O Mini Notion é uma aplicação web simplificada para criação e edição de documentos pessoais. Pessoas
-autenticadas poderão criar uma conta, entrar, pesquisar e gerenciar seus próprios documentos, além de
-editar conteúdo Rich Text.
+O produto usado como exemplo é o **Mini Notion**, uma aplicação de documentos pessoais. Ele fornece
+um problema realista para aplicar as práticas do workshop, mas os conceitos apresentados aqui podem
+ser usados em outros projetos e com outros agentes de IA.
 
-O produto não pretende reproduzir integralmente o Notion. O MVP prioriza autenticação segura,
-isolamento dos dados por usuário e uma experiência direta de escrita e organização.
+## A ideia central
 
-## Escopo do MVP
+Uma IA consegue explorar arquivos, propor soluções, editar código e executar ferramentas. Isso não
+significa que ela conheça automaticamente o objetivo do produto, as regras da equipe ou o nível de
+risco aceitável. Sem contexto e verificações, velocidade apenas permite produzir erros mais rápido.
 
-- Cadastro e login com e-mail e senha.
-- Sessão persistente e proteção de páginas e operações privadas.
-- Bloqueio temporário após tentativas repetidas de login.
-- Criação, listagem, pesquisa, edição e exclusão de documentos.
-- Editor Rich Text com negrito, itálico, sublinhado, cores, tamanho de fonte, alinhamento e listas.
-- Sidebar para documentos e conta.
-- Sumário navegável derivado dos títulos do documento.
-- Temas claro e escuro.
+Neste projeto, a IA trabalha dentro de um processo explícito:
 
-## Fora do escopo inicial
+1. O comportamento esperado é especificado antes da implementação.
+2. Decisões técnicas são pesquisadas e registradas.
+3. O trabalho é dividido em tarefas pequenas e verificáveis.
+4. Testes orientam a implementação nos domínios críticos.
+5. Ferramentas limitam acesso, reduzem ruído e preservam contexto.
+6. Uma pessoa revisa mudanças e autoriza operações sensíveis.
 
-- Cópia completa dos recursos do Notion.
-- Colaboração simultânea, compartilhamento público e permissões entre usuários.
-- Aplicações móveis nativas.
-- Login social, autenticação multifator e confirmação de e-mail.
-- Recuperação de senha, histórico de versões e exportação, até que recebam specs próprias.
+A IA é tratada como uma colaboradora capaz de executar trabalho, não como substituta de engenharia,
+revisão ou responsabilidade.
 
-## Stack aprovada
+## Práticas adotadas
 
-### Monorepo e qualidade
+### Spec-Driven Development (SDD)
 
-- pnpm e Turborepo.
-- TypeScript.
-- Biome.
-- Vitest e uma ferramenta de testes end-to-end a ser definida durante o plano da foundation.
-- Zod para schemas e contratos compartilhados.
-- Commitlint e Lefthook.
-- Docker para ambientes das aplicações e do MongoDB.
+Spec-Driven Development coloca a especificação no centro do desenvolvimento. Antes de perguntar
+"como implementar?", o processo esclarece "o que precisa acontecer?", "para quem?" e "como saberemos
+que funcionou?".
 
-### Web
+Isso reduz um problema comum no uso de IA: receber uma implementação tecnicamente plausível para um
+requisito ambíguo. Neste repositório, cada funcionalidade possui uma pasta em [`specs/`](specs/README.md)
+e progride por artefatos com responsabilidades diferentes:
 
-- Next.js e React.
-- Tailwind CSS.
-- shadcn/ui.
-- Tiptap.
+- `spec.md` descreve necessidades, cenários e critérios de sucesso, sem escolher a implementação;
+- `plan.md` registra pesquisa, arquitetura e decisões técnicas da feature;
+- `tasks.md` transforma o plano em unidades de trabalho ordenadas e testáveis;
+- checklists e análises aplicam os critérios obrigatórios de qualidade, chamados de *quality gates*,
+  antes de escrever código.
 
-### API e dados
+SDD não elimina mudanças. Ele torna explícito o motivo de uma mudança e permite atualizar primeiro a
+fonte de verdade correta, em vez de deixar a intenção escondida no código ou em uma conversa com a IA.
 
-- NestJS com Fastify.
-- MongoDB.
-- Better Auth com seu adaptador oficial do MongoDB.
-- Mongoose para modelos pertencentes ao domínio da aplicação.
+### Spec Kit
 
-As versões serão escolhidas somente durante o planejamento técnico, após consulta ao Context7, e
-centralizadas no `catalog` de `pnpm-workspace.yml`.
-
-## Arquitetura de alto nível
+O [GitHub Spec Kit](https://github.com/github/spec-kit) fornece os comandos e templates usados para
+aplicar SDD. O fluxo adotado neste projeto é:
 
 ```text
-apps/
-├── web/
-│   └── src/
-│       ├── app/
-│       ├── components/
-│       └── styles/
-└── api/
-    └── src/
-        ├── modules/
-        ├── shared/
-        └── infra/
-
-packages/
-├── typescript-config/
-├── schemas/
-├── biome/
-└── vitest-config/
+/speckit.constitution
+        ↓
+/speckit.specify → /speckit.clarify → /speckit.plan → /speckit.tasks
+                                                        ↓
+                              /speckit.analyze → /speckit.implement
+                                                        ↓
+                                                /speckit.converge
 ```
 
-A estrutura detalhada será definida no plano de cada feature. Novas pastas ou camadas devem existir
-por responsabilidade concreta, não apenas para reproduzir um padrão.
+- `/speckit.constitution` estabelece princípios permanentes e quality gates do projeto;
+- `/speckit.specify` cria ou atualiza o comportamento esperado de uma feature;
+- `/speckit.clarify` resolve ambiguidades que poderiam gerar decisões incorretas;
+- `/speckit.plan` pesquisa dependências e define o desenho técnico;
+- `/speckit.tasks` produz tarefas ordenadas e verificáveis;
+- `/speckit.analyze` compara spec, plano e tarefas antes da implementação;
+- `/speckit.implement` executa as tarefas aprovadas;
+- `/speckit.converge` identifica lacunas restantes depois de uma rodada de trabalho.
 
-## Decisões de persistência
+Nem todo projeto precisa de todos os artefatos para qualquer alteração pequena. Aqui, o fluxo completo
+é intencional porque faz parte do exercício e porque autenticação, autorização e dados privados têm
+alto risco. Os comandos instalados para o OpenCode podem ser vistos em [`.opencode/commands/`](.opencode/commands/).
 
-### Autenticação
+### Test-Driven Development (TDD)
 
-O Better Auth será executado na API NestJS e será responsável pelos dados de usuários, contas,
-credenciais, sessões e verificações. Seu adaptador oficial usará o driver nativo do MongoDB. O
-Mongoose continuará restrito aos modelos do domínio, evitando uma integração não oficial entre
-Better Auth e Mongoose.
+TDD usa um ciclo curto chamado **Red-Green-Refactor**:
 
-A senha não será criptografada: será armazenada como hash Argon2id. A implementação deverá:
+1. **Red:** escrever um teste que descreve o próximo comportamento e confirmar que ele falha pelo
+   motivo esperado;
+2. **Green:** implementar somente o necessário para o teste passar;
+3. **Refactor:** melhorar a estrutura sem alterar o comportamento já protegido.
 
-- gerar salt único por senha por meio da biblioteca Argon2;
-- obter o pepper de um segredo de ambiente, nunca do banco ou repositório;
-- documentar estratégia de rotação e recuperação antes de habilitar pepper em produção;
-- nunca persistir senha ou confirmação em texto puro.
+Com IA, esse ciclo é especialmente útil: o teste fornece um objetivo executável e reduz a chance de a
+implementação parecer correta apenas por inspeção. Neste projeto, TDD é obrigatório nos domínios
+críticos definidos pela [constituição](.specify/memory/constitution.md), e outros módulos recebem
+testes proporcionais ao risco.
 
-### Documentos
+Cobertura alta não é prova de qualidade por si só. As asserções ainda precisam representar
+comportamentos, falhas, limites e regras de segurança relevantes.
 
-Documentos ficarão em coleção própria e serão relacionados ao proprietário por `userId`. Não serão
-embutidos como strings no registro do usuário.
+### Engenharia de contexto
 
-O conteúdo canônico será o JSON estruturado do Tiptap/ProseMirror. HTML e Markdown poderão ser
-gerados para renderização ou exportação, mas não serão a fonte de verdade. A pesquisa poderá usar um
-texto simples derivado e indexável, definido no plano da feature. O sumário será derivado dos headings
-presentes no JSON.
+Um prompt isolado é uma fonte frágil de contexto: pode ser esquecido, interpretado de maneira
+diferente ou desaparecer ao iniciar uma nova sessão. Por isso, as decisões importantes deste projeto
+ficam versionadas e distribuídas por responsabilidade:
 
-## Decisões de autenticação e sessão
+- [`AGENTS.md`](AGENTS.md) ensina aos agentes como operar no repositório;
+- [a constituição](.specify/memory/constitution.md) define princípios permanentes;
+- [`docs/`](docs/) concentra a visão e as decisões globais do produto;
+- [`specs/`](specs/README.md) define o comportamento de cada feature;
+- planos e tarefas registram como uma feature aprovada será implementada.
 
-- A API é a autoridade de autenticação e autorização.
-- O navegador receberá uma sessão opaca em cookie `HttpOnly`, `Secure` em produção e com política
-  `SameSite` compatível com a implantação.
-- O MVP não implementará manualmente um par `accessToken`/`refreshToken` no navegador.
-- A sessão permanecerá válida por até sete dias e poderá ser renovada por atividade com intervalo de
-  atualização de 24 horas; não haverá refresh a cada minuto.
-- Web e API devem ser publicados sob a mesma origem ou por proxy sempre que possível.
-- Todas as operações privadas validarão sessão e propriedade do recurso no servidor.
+Essa organização ajuda a IA a recuperar contexto confiável e também permite que pessoas revisem as
+mesmas regras. Instruções para agentes fazem parte do projeto e devem receber o mesmo cuidado que
+outras configurações versionadas.
 
-## Regras de cadastro e login
+### Supervisão humana
 
-- E-mail será normalizado, validado por schema compartilhado e protegido por unicidade no banco.
-- A confirmação de senha existirá apenas no formulário e na validação de entrada.
-- O usuário iniciará uma sessão após cadastro válido.
-- Erros de credenciais serão genéricos para reduzir enumeração de contas.
-- Após cinco tentativas inválidas, a conta será bloqueada por 15 minutos.
-- `loginAttempts` será zerado após autenticação válida e `lockedUntil` representará o bloqueio.
-- O bloqueio por conta será combinado com rate limiting da rota e origem da requisição.
+Automação não deve significar autorização irrestrita. As regras em [`AGENTS.md`](AGENTS.md) exigem
+aprovação explícita antes de criar, editar, mover ou excluir arquivos. O workflow de commits também
+separa análise, staging, revisão do diff e autorização final de cada commit.
 
-## Estratégia de qualidade
+Esses pontos de controle são úteis porque permitem interromper uma ação antes que ela altere o estado
+do projeto. A pessoa continua responsável por validar requisitos, aceitar trade-offs e decidir o que
+entra no histórico. Quanto maior o impacto ou a dificuldade de reversão, mais explícita deve ser a
+aprovação.
 
-- Autenticação, autorização, documentos e schemas compartilhados exigem 100% de cobertura em
-  statements, branches, functions e lines.
-- Não existe percentual mínimo global. Outras áreas recebem testes proporcionais ao risco.
-- Cada feature começa por testes e segue Red-Green-Refactor.
-- Contratos e integrações exigem testes de integração; jornadas essenciais exigem testes end-to-end.
-- Cobertura numérica não substitui testes de comportamento, falhas, limites e segurança.
+## Ferramentas de apoio
 
-## Roadmap documental
+### OpenCode
 
-1. Foundation do monorepo e quality gates.
-2. Cadastro, login, sessão e autorização.
-3. Gerenciamento e pesquisa de documentos.
-4. Editor Rich Text e navegação pelo conteúdo.
+[OpenCode](https://opencode.ai/) é o agente de desenvolvimento usado neste workshop. Ele lê as
+instruções do repositório, consulta arquivos, executa ferramentas e propõe ou realiza alterações. As
+práticas deste projeto não dependem exclusivamente dele: SDD, TDD, isolamento e revisão humana
+continuam válidos ao trocar o agente.
 
-Cada etapa deve ter spec aprovada, clarificação quando necessária, plano, tarefas e análise de
-consistência antes da implementação.
+### AI Jail
 
-## Decisões futuras
+[AI Jail](https://github.com/akitaonrails/ai-jail) executa agentes dentro de um sandbox baseado nos
+mecanismos do sistema operacional. A configuração [`.ai-jail`](.ai-jail) deste projeto mantém o
+workspace gravável, mas bloqueia caminhos comuns de segredos e desabilita recursos desnecessários,
+como Docker, GPU, display e SSH.
 
-Os seguintes temas permanecem fora das specs iniciais ou precisam ser definidos no plano adequado:
+O sandbox reduz o alcance de erros e comandos indesejados, mas não torna a execução 100% segura. Ele
+depende das garantias do sistema operacional, não equivale a uma máquina virtual e não substitui
+revisão, backups, controle de versão ou proteção adequada de credenciais. Segurança é aplicada em
+camadas.
 
-- autosave, indicador de estado e resolução de falhas ao salvar;
-- paginação e limites de documentos e conteúdo;
-- exclusão lógica, lixeira e política de retenção;
-- recuperação de senha e confirmação de e-mail;
-- exportação para HTML ou Markdown;
-- estratégia de observabilidade e implantação;
-- ferramenta de teste end-to-end.
+### Context7
+
+[Context7](https://context7.com/) fornece documentação atual de bibliotecas, frameworks, SDKs e
+ferramentas para o agente. Neste projeto, decisões sobre dependências devem consultar essa fonte antes
+de adotar ou modificar uma tecnologia.
+
+Isso reduz respostas baseadas apenas no conhecimento de treinamento do modelo, que pode estar
+desatualizado. A consulta à documentação também não elimina análise: compatibilidade, segurança e
+adequação ao problema ainda precisam ser avaliadas.
+
+### RTK
+
+[RTK](https://github.com/rtk-ai/rtk) funciona como um proxy para comandos de terminal. O agente usa
+prefixos como `rtk git status` ou `rtk vitest`, e o RTK remove barras de progresso, repetições e outras
+saídas pouco úteis antes de enviá-las ao modelo.
+
+Menos ruído preserva a janela de contexto para informações relevantes e reduz o consumo de tokens.
+Como qualquer filtro, ele pode ocultar detalhes; quando necessário, o agente deve consultar a saída
+completa ou usar uma ferramenta mais específica. A configuração local fica em [`.rtk/`](.rtk/).
+
+### Git e commits focados
+
+Mudanças pequenas e coerentes são mais fáceis de revisar, testar e reverter. Este projeto usa
+[Conventional Commits](https://www.conventionalcommits.org/) e não mistura alterações sem relação no
+mesmo commit. Antes de cada commit, o fluxo adotado:
+
+1. inspeciona alterações preparadas para o próximo commit (*staged*) e ainda não preparadas
+   (*unstaged*);
+2. separa grupos por propósito;
+3. sinaliza segredos, arquivos temporários ou artefatos suspeitos;
+4. faz staging somente do grupo autorizado;
+5. revisa novamente o diff staged;
+6. solicita aprovação imediatamente antes do commit.
+
+O histórico Git torna-se parte da explicação do projeto, não apenas um registro de arquivos alterados.
+
+## Como as práticas se conectam
+
+As ferramentas resolvem problemas diferentes e se complementam:
+
+```text
+Intenção do produto
+        ↓
+Spec Kit + SDD          tornam requisitos e decisões explícitos
+        ↓
+TDD + quality gates     transformam expectativas em verificações executáveis
+        ↓
+OpenCode                explora e executa o trabalho orientado pelo contexto
+        ↓
+AI Jail                 limita os recursos acessíveis durante a execução
+        ↓
+Context7 + RTK          melhoram a qualidade e a eficiência das informações
+        ↓
+Revisão humana + Git    controlam aceitação, rastreabilidade e reversão
+```
+
+Nenhuma ferramenta isolada garante um bom resultado. O valor está no processo completo: contexto
+antes da execução, feedback durante o desenvolvimento e revisão antes da integração.
+
+## Estrutura do repositório
+
+```text
+.
+├── .ai-jail                 # Política do sandbox usado pelo agente
+├── .opencode/commands/      # Comandos do Spec Kit e workflows do OpenCode
+├── .rtk/                    # Filtros locais de saída do terminal
+├── .specify/                # Templates, scripts e constituição do Spec Kit
+├── docs/                    # Visão e decisões globais do produto
+├── specs/                   # Especificações e planejamento por feature
+├── AGENTS.md                # Regras operacionais para agentes de IA
+└── README.md                # Guia do workshop (este documento)
+```
+
+Durante a implementação do Mini Notion, a estrutura planejada também incluirá:
+
+```text
+apps/                        # Aplicações executáveis, como web e API
+packages/                    # Contratos e configurações reutilizáveis
+```
+
+Pastas não devem ser criadas apenas para reproduzir um padrão. Cada diretório precisa representar uma
+responsabilidade concreta do projeto.
+
+## Documentação do exemplo
+
+- [Visão do produto](docs/product-overview.md): objetivo, escopo e roadmap do Mini Notion;
+- [Arquitetura](docs/architecture.md): stack aprovada e organização planejada do monorepo;
+- [Decisões técnicas](docs/technical-decisions.md): persistência, segurança, sessão e qualidade;
+- [Especificações](specs/README.md): comportamento e estado de planejamento de cada feature;
+- [Constituição](.specify/memory/constitution.md): princípios permanentes e quality gates.
+
+O README explica **como aprender e trabalhar com IA neste projeto**. Os documentos acima explicam
+**o produto que está sendo construído** e funcionam como fontes de verdade para pessoas e agentes.

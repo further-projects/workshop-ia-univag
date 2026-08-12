@@ -32,18 +32,21 @@ gerados pelos comandos apropriados quando a feature estiver pronta.
 
 ## Fluxo
 
-1. Criar ou atualizar a feature com `$speckit-specify`.
-2. Resolver decisões pendentes com `$speckit-clarify`.
-3. Produzir pesquisa e desenho técnico com `$speckit-plan`.
-4. Gerar tarefas com `$speckit-tasks`.
-5. Validar consistência com `$speckit-analyze`.
-6. Implementar com `$speckit-implement`.
+1. Criar ou atualizar a feature com `/speckit.specify`.
+2. Resolver decisões pendentes com `/speckit.clarify`.
+3. Produzir pesquisa e desenho técnico com `/speckit.plan`.
+4. Gerar tarefas com `/speckit.tasks`.
+5. Validar consistência com `/speckit.analyze`.
+6. Implementar com `/speckit.implement`.
 
 Uma feature não deve avançar enquanto seu checklist de requisitos contiver falhas relevantes.
 
 ## Responsabilidade dos documentos
 
 - A [constituição](../.specify/memory/constitution.md) contém princípios permanentes.
-- A [visão geral](../README.md) contém stack, arquitetura e decisões globais.
+- O [guia do workshop](../README.md) explica as práticas de desenvolvimento assistido por IA.
+- A [documentação do produto](../docs/product-overview.md) contém visão, escopo e roadmap.
+- A [arquitetura](../docs/architecture.md) contém stack e decisões arquiteturais globais.
+- As [decisões técnicas](../docs/technical-decisions.md) consolidam persistência, segurança e qualidade.
 - Cada `spec.md` descreve necessidades, comportamento e sucesso sem definir implementação.
 - Cada `plan.md` futuro conterá escolhas técnicas específicas da feature.

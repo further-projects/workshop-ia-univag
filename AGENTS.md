@@ -6,7 +6,10 @@ completa do produto.
 ## Fontes de verdade
 
 - [Constituição](.specify/memory/constitution.md): princípios permanentes e quality gates.
-- [Visão do projeto](README.md): objetivo, stack, arquitetura e decisões globais.
+- [Guia do workshop](README.md): práticas e ferramentas de desenvolvimento assistido por IA.
+- [Documentação do produto](docs/product-overview.md): visão, escopo e roadmap do Mini Notion.
+- [Arquitetura](docs/architecture.md): stack e decisões arquiteturais globais.
+- [Decisões técnicas](docs/technical-decisions.md): persistência, segurança, sessão e qualidade.
 - [Índice de specs](specs/README.md): funcionalidades, ordem e estado do planejamento.
 - `specs/<feature>/spec.md`: comportamento esperado e critérios de aceitação da feature.
 - `specs/<feature>/plan.md` e `tasks.md`: decisões e trabalho de implementação, quando existirem.
@@ -27,15 +30,15 @@ para o comportamento operacional dos agentes.
 
 Cada feature deve seguir esta sequência:
 
-1. `$speckit-specify`: criar ou atualizar a especificação.
-2. `$speckit-clarify`: resolver ambiguidades relevantes.
-3. `$speckit-plan`: pesquisar e produzir o desenho técnico.
-4. `$speckit-tasks`: gerar tarefas ordenadas e testáveis.
-5. `$speckit-analyze`: verificar consistência entre spec, plano e tarefas.
-6. `$speckit-implement`: implementar somente após os gates anteriores.
-7. `$speckit-converge`: identificar trabalho restante quando necessário.
+1. `/speckit.specify`: criar ou atualizar a especificação.
+2. `/speckit.clarify`: resolver ambiguidades relevantes.
+3. `/speckit.plan`: pesquisar e produzir o desenho técnico.
+4. `/speckit.tasks`: gerar tarefas ordenadas e testáveis.
+5. `/speckit.analyze`: verificar consistência entre spec, plano e tarefas.
+6. `/speckit.implement`: implementar somente após os gates anteriores.
+7. `/speckit.converge`: identificar trabalho restante quando necessário.
 
-Use `$speckit-constitution` somente para princípios permanentes e `$speckit-checklist` para
+Use `/speckit.constitution` somente para princípios permanentes e `/speckit.checklist` para
 checklists específicos de uma feature.
 
 ## Idioma
